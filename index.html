@@ -20,6 +20,8 @@
             <a href="#/saved" class="nav-link" data-route="/saved">Saved</a>
             <a href="#/digest" class="nav-link" data-route="/digest">Digest</a>
             <a href="#/settings" class="nav-link" data-route="/settings">Settings</a>
+            <a href="#/jt/07-test" class="nav-link" data-route="/jt/07-test">Test</a>
+            <a href="#/jt/08-ship" class="nav-link" data-route="/jt/08-ship">Ship</a>
             <a href="#/proof" class="nav-link" data-route="/proof">Proof</a>
         </nav>
 
@@ -76,6 +78,21 @@
         let prefs = JSON.parse(localStorage.getItem('jobTrackerPreferences')) || null;
         let jobStatuses = JSON.parse(localStorage.getItem('jobTrackerStatus')) || {};
         let statusHistory = JSON.parse(localStorage.getItem('jobTrackerStatusHistory')) || [];
+        let testChecklist = JSON.parse(localStorage.getItem('testChecklist')) || Array(10).fill(false);
+
+        // Test Checklist Definitions
+        const testItems = [
+            { label: "Preferences persist after refresh", tip: "Set settings, refresh page, check if form is filled." },
+            { label: "Match score calculates correctly", tip: "Verify % match against scoring rules for a specific job." },
+            { label: "Show only matches toggle works", tip: "Enable toggle on dashboard, verify low score jobs disappear." },
+            { label: "Save job persists after refresh", tip: "Save a job, refresh, check Saved tab." },
+            { label: "Apply opens in new tab", tip: "Click Apply button, verify new browser tab opens." },
+            { label: "Status update persists after refresh", tip: "Change status, refresh, verify badge remains." },
+            { label: "Status filter works correctly", tip: "Filter by Applied/Rejected on dashboard." },
+            { label: "Digest generates top 10 by score", tip: "Check Digest tab for top ranked jobs." },
+            { label: "Digest persists for the day", tip: "Verify status log and top 10 remain visible." },
+            { label: "No console errors on main pages", tip: "Open DevTools (F12) and check Console tab." }
+        ];
 
         // Route Configuration
         const routes = {
@@ -83,6 +100,8 @@
             '/dashboard': { type: 'jobs', title: 'Job Dashboard' },
             '/saved': { type: 'saved', title: 'Saved Jobs' },
             '/digest': { type: 'digest', title: 'Weekly Digest' },
+            '/jt/07-test': { type: 'test', title: 'Test Checklist' },
+            '/jt/08-ship': { type: 'ship', title: 'System Deployment' },
             '/settings': { type: 'settings', title: 'Preferences', subtext: 'Configure your career focus for intelligent matching.' },
             '/proof': { type: 'standard', title: 'Proof', emptyTitle: 'Artifact Workspace', emptySubtext: 'Placeholder for premium system proof.' }
         };
@@ -347,18 +366,29 @@
             modalBody.innerHTML = `
                 <h2 style="margin-bottom: 8px;">${job.title}</h2>
                 <div class="job-card-company" style="font-size: 18px; margin-bottom: 24px;">${job.company}</div>
-                
-                <h3 style="font-size: 16px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">Description</h3>
+                <h3 style="font-size: 14px; margin-bottom: 8px;">DESCRIPTION</h3>
                 <p class="text-muted" style="margin-bottom: 24px;">${job.description}</p>
-                
-                <h3 style="font-size: 16px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px;">Skills Required</h3>
+                <h3 style="font-size: 14px; margin-bottom: 12px;">SKILLS</h3>
                 <div style="margin-bottom: 32px;">
                     ${job.skills.map(s => `<span class="skill-tag">${s}</span>`).join('')}
                 </div>
-                
-                <a href="${job.applyUrl}" target="_blank" class="btn btn-primary" style="width: 100%; text-decoration: none;">Proceed to Apply</a>
+                <a href="${job.applyUrl}" target="_blank" class="btn btn-primary" style="width: 100%; text-decoration: none;">Apply Externally</a>
             `;
             document.getElementById('job-modal').classList.add('open');
+        }
+
+        function toggleTestItem(index) {
+            testChecklist[index] = !testChecklist[index];
+            localStorage.setItem('testChecklist', JSON.stringify(testChecklist));
+            router();
+        }
+
+        function resetTests() {
+            if (confirm("Reset all test states?")) {
+                testChecklist = Array(10).fill(false);
+                localStorage.setItem('testChecklist', JSON.stringify(testChecklist));
+                router();
+            }
         }
 
         // Router Implementation
@@ -367,7 +397,26 @@
             const route = routes[path] || routes['/'];
             const app = document.getElementById('app-root');
 
-            if (route.type === 'hero') {
+            // SHIP LOCK Logic
+            const totalPassed = testChecklist.filter(t => t).length;
+            if (path === '/jt/08-ship' && totalPassed < 10) {
+                app.innerHTML = `
+                    <section class="context-header"><h1>${route.title}</h1></section>
+                    <main class="main-container">
+                        <article class="primary-workspace">
+                            <div class="ship-locked">
+                                <span class="lock-icon">🔒</span>
+                                <h2>Route Locked</h2>
+                                <p class="text-muted" style="margin-bottom: 24px;">System deployment is disabled until all testing requirements are met.</p>
+                                <div class="badge-status status-rejected" style="font-size: 14px; padding: 12px 24px;">${totalPassed} / 10 Tests Passed</div>
+                                <div style="margin-top: 32px;">
+                                    <a href="#/jt/07-test" class="btn btn-primary">Go to Test Checklist</a>
+                                </div>
+                            </div>
+                        </article>
+                    </main>
+                `;
+            } else if (route.type === 'hero') {
                 app.innerHTML = `
                     <section class="context-header hero-section">
                         <h1>${route.title}</h1>
@@ -380,12 +429,7 @@
                     <section class="context-header"><h1>${route.title}</h1></section>
                     <main class="main-container">
                         <article class="primary-workspace" style="flex: 0 0 100%;">
-                            ${!prefs ? `
-                                <div class="banner">
-                                    <div class="banner-text">Set your preferences to activate intelligent matching.</div>
-                                    <a href="#/settings" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">Go to Settings</a>
-                                </div>
-                            ` : ''}
+                            ${!prefs ? `<div class="banner"><div class="banner-text">Set your preferences to activate intelligent matching.</div><a href="#/settings" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">Settings</a></div>` : ''}
                             ${renderFilters()}
                             <div class="job-grid" id="job-grid"></div>
                         </article>
@@ -399,17 +443,39 @@
                     <main class="main-container">
                         <article class="primary-workspace">
                             ${savedList.length === 0 ?
-                        `<div class="empty-state"><h2>No saved jobs.</h2><p class="text-muted">Interested in a role? Star it to track it here.</p></div>` :
+                        `<div class="empty-state"><h2>No saved jobs.</h2></div>` :
                         `<div class="job-grid">${savedList.map(j => createJobCard(j, true)).join('')}</div>`
                     }
                         </article>
                     </main>
                 `;
             } else if (route.type === 'digest') {
+                // Top 10 Match Logic
+                const topJobs = [...jobs]
+                    .map(j => ({ ...j, score: calculateMatchScore(j) }))
+                    .sort((a, b) => b.score - a.score)
+                    .slice(0, 10);
+
                 app.innerHTML = `
                     <section class="context-header"><h1>${route.title}</h1></section>
                     <main class="main-container">
                         <article class="primary-workspace">
+                            <div class="card" style="margin-bottom: 24px;">
+                                <h2>Top 10 Matches</h2>
+                                <p class="text-muted" style="margin-bottom: 20px;">Precision-selected based on your recent activity and saved profile.</p>
+                                <div style="display: flex; flex-direction: column; gap: 8px;">
+                                    ${topJobs.map((j, i) => `
+                                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid var(--color-border); border-radius: 6px;">
+                                            <div>
+                                                <span style="font-weight: bold; margin-right: 8px;">#${i + 1}</span>
+                                                ${j.title} at ${j.company}
+                                            </div>
+                                            <div class="badge-score ${getScoreClass(j.score)}">${j.score}%</div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+
                             <div class="card">
                                 <h2>Recent Status Updates</h2>
                                 ${statusHistory.length === 0 ?
@@ -429,6 +495,52 @@
                                         `).join('')}
                                     </div>`
                     }
+                            </div>
+                        </article>
+                    </main>
+                `;
+            } else if (route.type === 'test') {
+                app.innerHTML = `
+                    <section class="context-header"><h1>${route.title}</h1></section>
+                    <main class="main-container">
+                        <article class="primary-workspace">
+                            <div class="test-summary">
+                                <h2>Tests Passed: ${totalPassed} / 10</h2>
+                                ${totalPassed < 10 ?
+                        `<p class="status-rejected badge" style="padding: 4px 12px; border-radius: 4px;">Resolve all issues before shipping.</p>` :
+                        `<p class="status-selected badge" style="padding: 4px 12px; border-radius: 4px;">System ready for deployment.</p>`
+                    }
+                                <div style="margin-top: 16px;">
+                                    <button class="btn btn-secondary" onclick="resetTests()" style="padding: 6px 12px; font-size: 12px;">Reset Test Status</button>
+                                </div>
+                            </div>
+                            <div class="checklist-container">
+                                ${testItems.map((item, i) => `
+                                    <div class="checklist-item">
+                                        <input type="checkbox" ${testChecklist[i] ? 'checked' : ''} onclick="toggleTestItem(${i})">
+                                        <div class="checklist-content">
+                                            <span class="checklist-label">${item.label}</span>
+                                            <span class="checklist-tooltip">How to test: ${item.tip}</span>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <div style="margin-top: 32px; text-align: center;">
+                                <a href="#/jt/08-ship" class="btn btn-primary" ${totalPassed < 10 ? 'style="opacity: 0.5; pointer-events: none;"' : ''}>Continue to Shipping</a>
+                            </div>
+                        </article>
+                    </main>
+                `;
+            } else if (route.type === 'ship') {
+                app.innerHTML = `
+                    <section class="context-header"><h1>${route.title}</h1></section>
+                    <main class="main-container">
+                        <article class="primary-workspace">
+                            <div class="card" style="text-align: center; padding: 64px 24px;">
+                                <div style="font-size: 64px; margin-bottom: 24px;">🚀</div>
+                                <h2>Deployment Ready</h2>
+                                <p class="text-muted" style="margin-bottom: 32px;">All quality gates passed. System is verified and ready for production.</p>
+                                <button class="btn btn-primary" onclick="alert('Deployment initiated: Job Tracker v1.0')">Initiate Final Ship</button>
                             </div>
                         </article>
                     </main>
