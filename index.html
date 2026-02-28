@@ -70,6 +70,7 @@
     <script>
         // State Management
         let savedJobs = JSON.parse(localStorage.getItem('savedJobs')) || [];
+        let prefs = JSON.parse(localStorage.getItem('jobTrackerPreferences')) || null;
 
         // Route Configuration
         const routes = {
@@ -77,13 +78,59 @@
             '/dashboard': { type: 'jobs', title: 'Job Dashboard' },
             '/saved': { type: 'saved', title: 'Saved Jobs' },
             '/digest': { type: 'standard', title: 'Weekly Digest', emptyTitle: 'No digest generated.', emptySubtext: 'Your personalized job summary will appear here.' },
-            '/settings': { type: 'settings', title: 'Preferences', subtext: 'Configure your career focus.' },
+            '/settings': { type: 'settings', title: 'Preferences', subtext: 'Configure your career focus for intelligent matching.' },
             '/proof': { type: 'standard', title: 'Proof', emptyTitle: 'Artifact Workspace', emptySubtext: 'Placeholder for premium system proof.' }
         };
+
+        // Match Score Engine
+        function calculateMatchScore(job) {
+            if (!prefs) return 0;
+
+            let score = 0;
+            const userKeywords = prefs.roleKeywords.split(',').map(k => k.trim().toLowerCase()).filter(k => k);
+            const userSkills = prefs.skills.split(',').map(s => s.trim().toLowerCase()).filter(s => s);
+            const userLocations = prefs.preferredLocations || [];
+            const userModes = prefs.preferredMode || [];
+
+            // 1. Role Keywords (+25 Title, +15 Description)
+            if (userKeywords.some(k => job.title.toLowerCase().includes(k))) score += 25;
+            else if (userKeywords.some(k => job.description.toLowerCase().includes(k))) score += 15;
+
+            // 2. Location (+15)
+            if (userLocations.some(l => job.location.includes(l))) score += 15;
+
+            // 3. Mode (+10)
+            if (userModes.includes(job.mode)) score += 10;
+
+            // 4. Experience (+10)
+            if (job.experience === prefs.experienceLevel) score += 10;
+
+            // 5. Skills Overlap (+15)
+            const jobSkills = job.skills.map(s => s.toLowerCase());
+            if (userSkills.some(us => jobSkills.includes(us))) score += 15;
+
+            // 6. Recency (+5)
+            if (job.postedDaysAgo <= 2) score += 5;
+
+            // 7. Source (+5)
+            if (job.source === 'LinkedIn') score += 5;
+
+            return Math.min(score, 100);
+        }
+
+        function getScoreClass(score) {
+            if (score >= 80) return 'score-high';
+            if (score >= 60) return 'score-mid';
+            if (score >= 40) return 'score-neutral';
+            return 'score-low';
+        }
 
         // UI Components
         function createJobCard(job, isSavedPage = false) {
             const isSaved = savedJobs.includes(job.id);
+            const score = calculateMatchScore(job);
+            const showScore = prefs !== null;
+
             return `
                 <div class="card job-card">
                     <div class="job-card-header">
@@ -91,7 +138,10 @@
                             <div class="job-card-title">${job.title}</div>
                             <div class="job-card-company">${job.company}</div>
                         </div>
-                        <div class="badge badge-source">${job.source}</div>
+                        <div style="display: flex; gap: 8px; align-items: flex-start;">
+                            ${showScore ? `<div class="badge-score ${getScoreClass(score)}">${score}% Match</div>` : ''}
+                            <div class="badge badge-source">${job.source}</div>
+                        </div>
                     </div>
                     <div class="job-meta">
                         <div class="job-meta-item">📍 ${job.location} <span class="badge badge-mode">${job.mode}</span></div>
@@ -113,12 +163,14 @@
         function renderFilters() {
             return `
                 <div class="filter-bar">
-                    <input type="text" class="filter-input" id="search-input" placeholder="Search roles or companies..." oninput="applyFilters()">
+                    <input type="text" class="filter-input" id="search-input" placeholder="Keyword search..." oninput="applyFilters()">
                     <select class="filter-select" id="location-filter" onchange="applyFilters()">
                         <option value="">All Locations</option>
                         <option value="Bengaluru">Bengaluru</option>
                         <option value="Hyderabad">Hyderabad</option>
                         <option value="Remote">Remote</option>
+                        <option value="Mumbai">Mumbai</option>
+                        <option value="Pune">Pune</option>
                         <option value="Gurugram">Gurugram</option>
                     </select>
                     <select class="filter-select" id="mode-filter" onchange="applyFilters()">
@@ -132,7 +184,24 @@
                         <option value="Fresher">Fresher</option>
                         <option value="0-1">0-1 Years</option>
                         <option value="1-3">1-3 Years</option>
+                        <option value="3-5">3-5 Years</option>
                     </select>
+                    <select class="filter-select" id="source-filter" onchange="applyFilters()">
+                        <option value="">All Sources</option>
+                        <option value="LinkedIn">LinkedIn</option>
+                        <option value="Naukri">Naukri</option>
+                        <option value="Indeed">Indeed</option>
+                    </select>
+                    <select class="filter-select" id="sort-dropdown" onchange="applyFilters()">
+                        <option value="latest">Sort: Latest</option>
+                        <option value="score">Sort: Match Score</option>
+                        <option value="salary">Sort: Salary</option>
+                    </select>
+                    ${prefs ? `
+                        <label class="checkbox-item" style="margin-left: auto;">
+                            <input type="checkbox" id="match-only-toggle" onchange="applyFilters()"> High Matches Only
+                        </label>
+                    ` : ''}
                 </div>
             `;
         }
@@ -143,27 +212,57 @@
             const locFilter = document.getElementById('location-filter');
             const modeFilter = document.getElementById('mode-filter');
             const expFilter = document.getElementById('exp-filter');
+            const sourceFilter = document.getElementById('source-filter');
+            const sortDropdown = document.getElementById('sort-dropdown');
+            const matchOnly = document.getElementById('match-only-toggle');
 
-            if (!searchInput || !locFilter || !modeFilter || !expFilter) return;
+            if (!searchInput || !locFilter || !modeFilter || !expFilter || !sourceFilter) return;
 
             const search = searchInput.value.toLowerCase();
             const loc = locFilter.value;
             const mode = modeFilter.value;
             const exp = expFilter.value;
+            const source = sourceFilter.value;
+            const sortBy = sortDropdown.value;
 
-            const filtered = jobs.filter(j => {
+            let filtered = jobs.filter(j => {
                 const matchesSearch = j.title.toLowerCase().includes(search) || j.company.toLowerCase().includes(search);
                 const matchesLoc = !loc || j.location.includes(loc);
                 const matchesMode = !mode || j.mode === mode;
                 const matchesExp = !exp || j.experience === exp;
-                return matchesSearch && matchesLoc && matchesMode && matchesExp;
+                const matchesSource = !source || j.source === source;
+
+                let matchesThreshold = true;
+                if (matchOnly && matchOnly.checked && prefs) {
+                    matchesThreshold = calculateMatchScore(j) >= prefs.minMatchScore;
+                }
+
+                return matchesSearch && matchesLoc && matchesMode && matchesExp && matchesSource && matchesThreshold;
+            });
+
+            // Sorting
+            filtered.sort((a, b) => {
+                if (sortBy === 'latest') return a.postedDaysAgo - b.postedDaysAgo;
+                if (sortBy === 'score') return calculateMatchScore(b) - calculateMatchScore(a);
+                if (sortBy === 'salary') {
+                    const getSalary = (str) => {
+                        const match = str.match(/(\d+)/);
+                        return match ? parseInt(match[1]) : 0;
+                    };
+                    return getSalary(b.salaryRange) - getSalary(a.salaryRange);
+                }
+                return 0;
             });
 
             const grid = document.getElementById('job-grid');
             if (!grid) return;
 
             if (filtered.length === 0) {
-                grid.innerHTML = `<div class="empty-state" style="grid-column: 1/-1;"><p class="text-muted">No jobs match your filters.</p></div>`;
+                grid.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1/-1;">
+                        <h2 class="text-muted">No roles match your criteria.</h2>
+                        <p class="text-muted">Adjust filters or lower your threshold in settings.</p>
+                    </div>`;
             } else {
                 grid.innerHTML = filtered.map(j => createJobCard(j)).join('');
             }
@@ -177,6 +276,22 @@
             }
             localStorage.setItem('savedJobs', JSON.stringify(savedJobs));
             router(); // Re-render to update UI
+        }
+
+        function savePreferences() {
+            const roleKeywords = document.getElementById('roleKeywords').value;
+            const selectedLocs = Array.from(document.getElementById('preferredLocations').selectedOptions).map(o => o.value);
+            const selectedModes = Array.from(document.querySelectorAll('input[name="preferredMode"]:checked')).map(i => i.value);
+            const experienceLevel = document.getElementById('experienceLevel').value;
+            const skills = document.getElementById('skills-prefs').value;
+            const minMatchScore = parseInt(document.getElementById('minMatchScore').value);
+
+            prefs = { roleKeywords, preferredLocations: selectedLocs, preferredMode: selectedModes, experienceLevel, skills, minMatchScore };
+            localStorage.setItem('jobTrackerPreferences', JSON.stringify(prefs));
+
+            // Show feedback and navigate
+            alert("Preferences saved. Scoring engine updated.");
+            window.location.hash = "#/dashboard";
         }
 
         function viewJob(id) {
@@ -217,19 +332,19 @@
                 app.innerHTML = `
                     <section class="context-header"><h1>${route.title}</h1></section>
                     <main class="main-container">
-                        <article class="primary-workspace">
+                        <article class="primary-workspace" style="flex: 0 0 100%;">
+                            ${!prefs ? `
+                                <div class="banner">
+                                    <div class="banner-text">Set your preferences to activate intelligent matching.</div>
+                                    <a href="#/settings" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">Go to Settings</a>
+                                </div>
+                            ` : ''}
                             ${renderFilters()}
-                            <div class="job-grid" id="job-grid">${jobs.map(j => createJobCard(j)).join('')}</div>
+                            <div class="job-grid" id="job-grid"></div>
                         </article>
-                        <aside class="secondary-panel">
-                            <div class="card">
-                                <h3>Market Analytics</h3>
-                                <p class="text-muted" style="font-size: 14px;">Showing ${jobs.length} premium Indian tech roles. Data synced from multiple tier-1 sources.</p>
-                            </div>
-                        </aside>
                     </main>
                 `;
-                applyFilters(); // Apply initial state
+                applyFilters();
             } else if (route.type === 'saved') {
                 const savedList = jobs.filter(j => savedJobs.includes(j.id));
                 app.innerHTML = `
@@ -251,20 +366,51 @@
                             <div class="card">
                                 <h2>Search Profile</h2>
                                 <div class="grid-2">
-                                    <div class="input-group"><label class="label">Role Keywords</label><input type="text" class="input-field" placeholder="e.g. Frontend, Java"></div>
-                                    <div class="input-group"><label class="label">Preferred Locations</label><input type="text" class="input-field" placeholder="e.g. Bengaluru, Remote"></div>
+                                    <div class="input-group">
+                                        <label class="label">Role Keywords (comma-separated)</label>
+                                        <input type="text" class="input-field" id="roleKeywords" placeholder="e.g. Frontend, Java, Intern" value="${prefs ? prefs.roleKeywords : ''}">
+                                    </div>
+                                    <div class="input-group">
+                                        <label class="label">Preferred Locations (Multi-select)</label>
+                                        <select class="input-field" id="preferredLocations" multiple style="height: 100px;">
+                                            <option value="Bengaluru" ${prefs?.preferredLocations.includes('Bengaluru') ? 'selected' : ''}>Bengaluru</option>
+                                            <option value="Hyderabad" ${prefs?.preferredLocations.includes('Hyderabad') ? 'selected' : ''}>Hyderabad</option>
+                                            <option value="Remote" ${prefs?.preferredLocations.includes('Remote') ? 'selected' : ''}>Remote</option>
+                                            <option value="Mumbai" ${prefs?.preferredLocations.includes('Mumbai') ? 'selected' : ''}>Mumbai</option>
+                                            <option value="Pune" ${prefs?.preferredLocations.includes('Pune') ? 'selected' : ''}>Pune</option>
+                                        </select>
+                                    </div>
                                 </div>
                                 <div class="grid-2">
                                     <div class="input-group">
-                                        <label class="label">Mode</label>
-                                        <select class="input-field"><option>Remote</option><option>Hybrid</option><option>Onsite</option></select>
+                                        <label class="label">Work Mode</label>
+                                        <div class="checkbox-group">
+                                            <label class="checkbox-item"><input type="checkbox" name="preferredMode" value="Remote" ${prefs?.preferredMode.includes('Remote') ? 'checked' : ''}> Remote</label>
+                                            <label class="checkbox-item"><input type="checkbox" name="preferredMode" value="Hybrid" ${prefs?.preferredMode.includes('Hybrid') ? 'checked' : ''}> Hybrid</label>
+                                            <label class="checkbox-item"><input type="checkbox" name="preferredMode" value="Onsite" ${prefs?.preferredMode.includes('Onsite') ? 'checked' : ''}> Onsite</label>
+                                        </div>
                                     </div>
                                     <div class="input-group">
                                         <label class="label">Experience Level</label>
-                                        <select class="input-field"><option>Fresher</option><option>1-3 Years</option><option>3-5 Years</option></select>
+                                        <select class="input-field" id="experienceLevel">
+                                            <option value="Fresher" ${prefs?.experienceLevel === 'Fresher' ? 'selected' : ''}>Fresher</option>
+                                            <option value="0-1" ${prefs?.experienceLevel === '0-1' ? 'selected' : ''}>0-1 Years</option>
+                                            <option value="1-3" ${prefs?.experienceLevel === '1-3' ? 'selected' : ''}>1-3 Years</option>
+                                            <option value="3-5" ${prefs?.experienceLevel === '3-5' ? 'selected' : ''}>3-5 Years</option>
+                                        </select>
                                     </div>
                                 </div>
-                                <button class="btn btn-primary">Save Preferences</button>
+                                <div class="grid-2">
+                                    <div class="input-group">
+                                        <label class="label">Skills (comma-separated)</label>
+                                        <input type="text" class="input-field" id="skills-prefs" placeholder="e.g. React, Java, SQL" value="${prefs ? prefs.skills : ''}">
+                                    </div>
+                                    <div class="input-group">
+                                        <label class="label">Minimum Match Score Threshold: <span id="score-val">${prefs ? prefs.minMatchScore : 40}</span>%</label>
+                                        <input type="range" id="minMatchScore" min="0" max="100" value="${prefs ? prefs.minMatchScore : 40}" oninput="document.getElementById('score-val').innerText = this.value">
+                                    </div>
+                                </div>
+                                <button class="btn btn-primary" onclick="savePreferences()" style="margin-top: 24px;">Save Preferences</button>
                             </div>
                         </article>
                     </main>
