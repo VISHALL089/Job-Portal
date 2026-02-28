@@ -326,6 +326,67 @@ p {
     color: var(--color-accent);
 }
 
+/* Status Badges */
+.badge-status {
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.status-not-applied {
+    background: rgba(17, 17, 17, 0.05);
+    color: var(--color-text-muted);
+}
+
+.status-applied {
+    background: rgba(0, 102, 204, 0.1);
+    color: #0066cc;
+}
+
+.status-rejected {
+    background: rgba(139, 0, 0, 0.1);
+    color: var(--color-accent);
+}
+
+.status-selected {
+    background: rgba(79, 109, 88, 0.1);
+    color: var(--color-success);
+}
+
+/* Toast Notification */
+.toast-container {
+    position: fixed;
+    bottom: 80px;
+    right: 20px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.toast {
+    background: var(--color-bg);
+    border: 1px solid var(--color-accent);
+    padding: 12px 24px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
 /* Banner */
 .banner {
     background: rgba(139, 0, 0, 0.05);
