@@ -1,0 +1,266 @@
+/* 
+ * KodNest Premium Build System
+ * Design System Core - CSS Variables & Utilities
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500&display=swap');
+
+:root {
+    /* Color System */
+    --color-bg: #F7F6F3;
+    --color-text: #111111;
+    --color-text-muted: #555555;
+    --color-accent: #8B0000;
+    --color-success: #4F6D58; /* Muted Green */
+    --color-warning: #B08D57; /* Muted Amber */
+    --color-border: rgba(17, 17, 17, 0.1);
+    --color-border-hover: rgba(17, 17, 17, 0.2);
+
+    /* Spacing System */
+    --space-xs: 8px;
+    --space-s: 16px;
+    --space-m: 24px;
+    --space-l: 40px;
+    --space-xl: 64px;
+
+    /* Typography */
+    --font-heading: 'Fraunces', serif;
+    --font-body: 'Inter', sans-serif;
+    --font-size-body: 17px;
+    --line-height-body: 1.7;
+    --max-width-text: 720px;
+
+    /* Interaction */
+    --transition: 180ms ease-in-out;
+    --border-radius: 4px; /* Subtle and intentional */
+}
+
+/* Base Resets */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body);
+    line-height: var(--line-height-body);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Typography Styles */
+h1, h2, h3, h4 {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+}
+
+h1 { font-size: 48px; margin-bottom: var(--space-s); }
+h2 { font-size: 32px; margin-bottom: var(--space-s); }
+
+p {
+    max-width: var(--max-width-text);
+    margin-bottom: var(--space-s);
+}
+
+/* Layout Components */
+.top-bar {
+    height: 64px;
+    border-bottom: 1px solid var(--color-border);
+    padding: 0 var(--space-m);
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    background: var(--color-bg);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.top-bar .project-name {
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-size: 14px;
+}
+
+.top-bar .progress-indicator {
+    color: var(--color-text-muted);
+    font-size: 14px;
+}
+
+.top-bar .status-area {
+    justify-self: end;
+}
+
+.context-header {
+    padding: var(--space-xl) var(--space-m) var(--space-l);
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.context-header .subtext {
+    color: var(--color-text-muted);
+    font-size: 18px;
+    margin-top: var(--space-xs);
+}
+
+.main-container {
+    display: flex;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 0 var(--space-m) var(--space-xl);
+    flex-grow: 1;
+    gap: var(--space-l);
+}
+
+.primary-workspace {
+    flex: 0 0 70%;
+}
+
+.secondary-panel {
+    flex: 0 0 30%;
+    position: sticky;
+    top: 104px; /* top-bar height + space */
+    height: fit-content;
+}
+
+.proof-footer {
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--color-bg);
+    border-top: 1px solid var(--color-border);
+    padding: var(--space-m);
+    z-index: 100;
+}
+
+/* Components */
+.card {
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    padding: var(--space-m);
+    margin-bottom: var(--space-m);
+    transition: border-color var(--transition);
+}
+
+.card:hover {
+    border-color: var(--color-border-hover);
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 24px;
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 15px;
+    cursor: pointer;
+    border-radius: var(--border-radius);
+    transition: all var(--transition);
+    border: 1px solid transparent;
+}
+
+.btn-primary {
+    background-color: var(--color-accent);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #6a0000;
+}
+
+.btn-secondary {
+    background-color: transparent;
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+}
+
+.btn-secondary:hover {
+    background-color: rgba(139, 0, 0, 0.05);
+}
+
+.input-group {
+    margin-bottom: var(--space-m);
+}
+
+.input-field {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    background: transparent;
+    font-family: var(--font-body);
+    font-size: 16px;
+    outline: none;
+    transition: border-color var(--transition);
+}
+
+.input-field:focus {
+    border-color: var(--color-accent);
+}
+
+.prompt-box {
+    background: rgba(17, 17, 17, 0.03);
+    border: 1px solid var(--color-border);
+    padding: var(--space-s);
+    border-radius: var(--border-radius);
+    font-family: monospace;
+    font-size: 14px;
+    margin-bottom: var(--space-s);
+    min-height: 80px;
+}
+
+.status-badge {
+    padding: 4px 12px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    border-radius: 100px;
+    border: 1px solid var(--color-border);
+}
+
+.status-shipped { color: var(--color-success); border-color: var(--color-success); }
+.status-progress { color: var(--color-accent); border-color: var(--color-accent); }
+.status-notstarted { color: var(--color-text-muted); }
+
+/* Proof Checklist */
+.proof-checklist {
+    display: flex;
+    max-width: 1400px;
+    margin: 0 auto;
+    gap: var(--space-l);
+    justify-content: center;
+}
+
+.proof-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: 14px;
+    color: var(--color-text-muted);
+}
+
+.proof-item input[type="checkbox"] {
+    accent-color: var(--color-accent);
+    width: 18px;
+    height: 18px;
+}
+
+/* Utilities */
+.spacing-m { margin-bottom: var(--space-m); }
+.spacing-l { margin-bottom: var(--space-l); }
+.text-muted { color: var(--color-text-muted); }
