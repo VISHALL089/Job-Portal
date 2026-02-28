@@ -56,44 +56,148 @@
         </div>
     </footer>
 
+    <!-- Modal Overlay -->
+    <div class="modal-overlay" id="job-modal">
+        <div class="modal-content">
+            <button class="modal-close" id="modal-close">&times;</button>
+            <div id="modal-body">
+                <!-- Modal content will be injected here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="jobs-data.js"></script>
     <script>
+        // State Management
+        let savedJobs = JSON.parse(localStorage.getItem('savedJobs')) || [];
+
         // Route Configuration
         const routes = {
-            '/': {
-                type: 'hero',
-                title: 'Stop Missing The Right Jobs.',
-                subtext: 'Precision-matched job discovery delivered daily at 9AM.'
-            },
-            '/dashboard': {
-                type: 'standard',
-                title: 'Dashboard',
-                emptyTitle: 'No jobs yet.',
-                emptySubtext: 'In the next step, you will load a realistic dataset.'
-            },
-            '/saved': {
-                type: 'standard',
-                title: 'Saved Jobs',
-                emptyTitle: 'Your saved list is empty.',
-                emptySubtext: 'Save interesting opportunities to track them here.'
-            },
-            '/digest': {
-                type: 'standard',
-                title: 'Weekly Digest',
-                emptyTitle: 'No digest generated.',
-                emptySubtext: 'Once we start tracking jobs, your weekly summary will appear here.'
-            },
-            '/settings': {
-                type: 'settings',
-                title: 'Preferences',
-                subtext: 'Configure your career focus and discovery rules.'
-            },
-            '/proof': {
-                type: 'standard',
-                title: 'Proof of Concept',
-                emptyTitle: 'Artifact Workspace.',
-                emptySubtext: 'Placeholder for premium build system artifact collection.'
-            }
+            '/': { type: 'hero', title: 'Stop Missing The Right Jobs.', subtext: 'Precision-matched job discovery delivered daily at 9AM.' },
+            '/dashboard': { type: 'jobs', title: 'Job Dashboard' },
+            '/saved': { type: 'saved', title: 'Saved Jobs' },
+            '/digest': { type: 'standard', title: 'Weekly Digest', emptyTitle: 'No digest generated.', emptySubtext: 'Your personalized job summary will appear here.' },
+            '/settings': { type: 'settings', title: 'Preferences', subtext: 'Configure your career focus.' },
+            '/proof': { type: 'standard', title: 'Proof', emptyTitle: 'Artifact Workspace', emptySubtext: 'Placeholder for premium system proof.' }
         };
+
+        // UI Components
+        function createJobCard(job, isSavedPage = false) {
+            const isSaved = savedJobs.includes(job.id);
+            return `
+                <div class="card job-card">
+                    <div class="job-card-header">
+                        <div>
+                            <div class="job-card-title">${job.title}</div>
+                            <div class="job-card-company">${job.company}</div>
+                        </div>
+                        <div class="badge badge-source">${job.source}</div>
+                    </div>
+                    <div class="job-meta">
+                        <div class="job-meta-item">📍 ${job.location} <span class="badge badge-mode">${job.mode}</span></div>
+                        <div class="job-meta-item">💼 ${job.experience}</div>
+                        <div class="job-meta-item">💰 ${job.salaryRange}</div>
+                        <div class="job-meta-item" style="margin-left: auto;">🕒 ${job.postedDaysAgo === 0 ? 'Today' : job.postedDaysAgo + ' days ago'}</div>
+                    </div>
+                    <div class="job-actions">
+                        <button class="btn btn-secondary" onclick="viewJob(${job.id})" style="padding: 8px 16px; font-size: 13px;">View Details</button>
+                        <button class="btn btn-secondary" onclick="toggleSave(${job.id})" style="padding: 8px 16px; font-size: 13px; color: ${isSaved ? 'var(--color-accent)' : ''};">
+                            ${isSaved ? '★ Saved' : '☆ Save'}
+                        </button>
+                        <a href="${job.applyUrl}" target="_blank" class="btn btn-primary" style="padding: 8px 16px; font-size: 13px; text-decoration: none;">Apply Now</a>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderFilters() {
+            return `
+                <div class="filter-bar">
+                    <input type="text" class="filter-input" id="search-input" placeholder="Search roles or companies..." oninput="applyFilters()">
+                    <select class="filter-select" id="location-filter" onchange="applyFilters()">
+                        <option value="">All Locations</option>
+                        <option value="Bengaluru">Bengaluru</option>
+                        <option value="Hyderabad">Hyderabad</option>
+                        <option value="Remote">Remote</option>
+                        <option value="Gurugram">Gurugram</option>
+                    </select>
+                    <select class="filter-select" id="mode-filter" onchange="applyFilters()">
+                        <option value="">All Modes</option>
+                        <option value="Remote">Remote</option>
+                        <option value="Hybrid">Hybrid</option>
+                        <option value="Onsite">Onsite</option>
+                    </select>
+                    <select class="filter-select" id="exp-filter" onchange="applyFilters()">
+                        <option value="">All Experience</option>
+                        <option value="Fresher">Fresher</option>
+                        <option value="0-1">0-1 Years</option>
+                        <option value="1-3">1-3 Years</option>
+                    </select>
+                </div>
+            `;
+        }
+
+        // Logic Functions
+        function applyFilters() {
+            const searchInput = document.getElementById('search-input');
+            const locFilter = document.getElementById('location-filter');
+            const modeFilter = document.getElementById('mode-filter');
+            const expFilter = document.getElementById('exp-filter');
+
+            if (!searchInput || !locFilter || !modeFilter || !expFilter) return;
+
+            const search = searchInput.value.toLowerCase();
+            const loc = locFilter.value;
+            const mode = modeFilter.value;
+            const exp = expFilter.value;
+
+            const filtered = jobs.filter(j => {
+                const matchesSearch = j.title.toLowerCase().includes(search) || j.company.toLowerCase().includes(search);
+                const matchesLoc = !loc || j.location.includes(loc);
+                const matchesMode = !mode || j.mode === mode;
+                const matchesExp = !exp || j.experience === exp;
+                return matchesSearch && matchesLoc && matchesMode && matchesExp;
+            });
+
+            const grid = document.getElementById('job-grid');
+            if (!grid) return;
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `<div class="empty-state" style="grid-column: 1/-1;"><p class="text-muted">No jobs match your filters.</p></div>`;
+            } else {
+                grid.innerHTML = filtered.map(j => createJobCard(j)).join('');
+            }
+        }
+
+        function toggleSave(id) {
+            if (savedJobs.includes(id)) {
+                savedJobs = savedJobs.filter(sid => sid !== id);
+            } else {
+                savedJobs.push(id);
+            }
+            localStorage.setItem('savedJobs', JSON.stringify(savedJobs));
+            router(); // Re-render to update UI
+        }
+
+        function viewJob(id) {
+            const job = jobs.find(j => j.id === id);
+            const modalBody = document.getElementById('modal-body');
+            modalBody.innerHTML = `
+                <h2 style="margin-bottom: 8px;">${job.title}</h2>
+                <div class="job-card-company" style="font-size: 18px; margin-bottom: 24px;">${job.company}</div>
+                
+                <h3 style="font-size: 16px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">Description</h3>
+                <p class="text-muted" style="margin-bottom: 24px;">${job.description}</p>
+                
+                <h3 style="font-size: 16px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px;">Skills Required</h3>
+                <div style="margin-bottom: 32px;">
+                    ${job.skills.map(s => `<span class="skill-tag">${s}</span>`).join('')}
+                </div>
+                
+                <a href="${job.applyUrl}" target="_blank" class="btn btn-primary" style="width: 100%; text-decoration: none;">Proceed to Apply</a>
+            `;
+            document.getElementById('job-modal').classList.add('open');
+        }
 
         // Router Implementation
         function router() {
@@ -109,95 +213,93 @@
                         <a href="#/settings" class="btn btn-primary">Start Tracking</a>
                     </section>
                 `;
+            } else if (route.type === 'jobs') {
+                app.innerHTML = `
+                    <section class="context-header"><h1>${route.title}</h1></section>
+                    <main class="main-container">
+                        <article class="primary-workspace">
+                            ${renderFilters()}
+                            <div class="job-grid" id="job-grid">${jobs.map(j => createJobCard(j)).join('')}</div>
+                        </article>
+                        <aside class="secondary-panel">
+                            <div class="card">
+                                <h3>Market Analytics</h3>
+                                <p class="text-muted" style="font-size: 14px;">Showing ${jobs.length} premium Indian tech roles. Data synced from multiple tier-1 sources.</p>
+                            </div>
+                        </aside>
+                    </main>
+                `;
+                applyFilters(); // Apply initial state
+            } else if (route.type === 'saved') {
+                const savedList = jobs.filter(j => savedJobs.includes(j.id));
+                app.innerHTML = `
+                    <section class="context-header"><h1>${route.title}</h1></section>
+                    <main class="main-container">
+                        <article class="primary-workspace">
+                            ${savedList.length === 0 ?
+                        `<div class="empty-state"><h2>No saved jobs.</h2><p class="text-muted">Interested in a role? Star it to track it here.</p></div>` :
+                        `<div class="job-grid">${savedList.map(j => createJobCard(j, true)).join('')}</div>`
+                    }
+                        </article>
+                    </main>
+                `;
             } else if (route.type === 'settings') {
                 app.innerHTML = `
-                    <section class="context-header">
-                        <h1>${route.title}</h1>
-                        <p class="subtext">${route.subtext}</p>
-                    </section>
+                    <section class="context-header"><h1>${route.title}</h1><p class="subtext">${route.subtext}</p></section>
                     <main class="main-container">
                         <article class="primary-workspace">
                             <div class="card">
                                 <h2>Search Profile</h2>
                                 <div class="grid-2">
-                                    <div class="input-group">
-                                        <label class="label">Role Keywords</label>
-                                        <input type="text" class="input-field" placeholder="e.g. Senior Frontend Engineer, Product Designer">
-                                    </div>
-                                    <div class="input-group">
-                                        <label class="label">Preferred Locations</label>
-                                        <input type="text" class="input-field" placeholder="e.g. Remote, Bengaluru, London">
-                                    </div>
+                                    <div class="input-group"><label class="label">Role Keywords</label><input type="text" class="input-field" placeholder="e.g. Frontend, Java"></div>
+                                    <div class="input-group"><label class="label">Preferred Locations</label><input type="text" class="input-field" placeholder="e.g. Bengaluru, Remote"></div>
                                 </div>
                                 <div class="grid-2">
                                     <div class="input-group">
                                         <label class="label">Mode</label>
-                                        <select class="input-field">
-                                            <option>Remote</option>
-                                            <option>Hybrid</option>
-                                            <option>Onsite</option>
-                                        </select>
+                                        <select class="input-field"><option>Remote</option><option>Hybrid</option><option>Onsite</option></select>
                                     </div>
                                     <div class="input-group">
                                         <label class="label">Experience Level</label>
-                                        <select class="input-field">
-                                            <option>Entry Level</option>
-                                            <option>Mid-Senior</option>
-                                            <option>Lead / Staff</option>
-                                            <option>Executive</option>
-                                        </select>
+                                        <select class="input-field"><option>Fresher</option><option>1-3 Years</option><option>3-5 Years</option></select>
                                     </div>
                                 </div>
                                 <button class="btn btn-primary">Save Preferences</button>
                             </div>
                         </article>
-                        <aside class="secondary-panel">
-                            <div class="card" style="border-color: var(--color-warning);">
-                                <h3>Logic Pending</h3>
-                                <p class="text-muted" style="font-size: 14px;">In this step, we are only defining the UI structure. Preferences are not yet persistent.</p>
-                            </div>
-                        </aside>
                     </main>
                 `;
             } else {
                 app.innerHTML = `
-                    <section class="context-header">
-                        <h1>${route.title}</h1>
-                    </section>
+                    <section class="context-header"><h1>${route.title}</h1></section>
                     <main class="main-container">
                         <article class="primary-workspace">
-                            <div class="empty-state">
-                                <h2 class="text-muted">${route.emptyTitle}</h2>
-                                <p class="text-muted">${route.emptySubtext}</p>
-                            </div>
+                            <div class="empty-state"><h2 class="text-muted">${route.emptyTitle}</h2><p class="text-muted">${route.emptySubtext}</p></div>
                         </article>
-                        <aside class="secondary-panel">
-                            <div class="card">
-                                <h3>Guidance</h3>
-                                <p class="text-muted" style="font-size: 14px;">This section is currently in a "Premium Empty" state, waiting for the dynamic dataset in the next phase.</p>
-                            </div>
-                        </aside>
                     </main>
                 `;
             }
 
-            // Update Active Links
             document.querySelectorAll('.nav-link').forEach(link => {
                 link.classList.toggle('active', link.getAttribute('data-route') === path);
             });
-
-            // Close mobile menu on navigation
             document.getElementById('main-nav').classList.remove('open');
         }
 
-        // Event Listeners
+        // Global Event Listeners
         window.addEventListener('hashchange', router);
         window.addEventListener('load', router);
-
-        // Mobile Menu Toggle
         document.getElementById('menu-toggle').addEventListener('click', () => {
             document.getElementById('main-nav').classList.toggle('open');
         });
+        document.getElementById('modal-close').addEventListener('click', () => {
+            document.getElementById('job-modal').classList.remove('open');
+        });
+        window.onclick = (event) => {
+            if (event.target == document.getElementById('job-modal')) {
+                document.getElementById('job-modal').classList.remove('open');
+            }
+        };
     </script>
 </body>
 
