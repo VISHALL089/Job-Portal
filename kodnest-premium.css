@@ -314,6 +314,53 @@ p {
     color: var(--color-text-muted);
 }
 
+/* Additional Navigation/Layout Utilities */
+.hero-section {
+    padding: var(--space-xl) 0;
+    text-align: center;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.hero-section h1 {
+    font-size: 64px;
+    margin-bottom: var(--space-m);
+}
+
+.hero-section .subtext {
+    font-size: 20px;
+    margin-bottom: var(--space-l);
+}
+
+.grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-m);
+}
+
+.empty-state {
+    padding: var(--space-xl) var(--space-m);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed var(--color-border);
+    border-radius: var(--border-radius);
+}
+
+.empty-state h2 {
+    margin-top: var(--space-m);
+}
+
+.label {
+    display: block;
+    font-weight: 500;
+    font-size: 14px;
+    margin-bottom: var(--space-xs);
+    color: var(--color-text);
+}
+
 /* Proof Checklist */
 .proof-checklist {
     display: flex;

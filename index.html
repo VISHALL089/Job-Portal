@@ -59,12 +59,40 @@
     <script>
         // Route Configuration
         const routes = {
-            '/': { title: 'Job Notification Tracker', subtext: 'This section will be built in the next step.' },
-            '/dashboard': { title: 'Dashboard', subtext: 'This section will be built in the next step.' },
-            '/saved': { title: 'Saved Jobs', subtext: 'This section will be built in the next step.' },
-            '/digest': { title: 'Weekly Digest', subtext: 'This section will be built in the next step.' },
-            '/settings': { title: 'Preferences', subtext: 'This section will be built in the next step.' },
-            '/proof': { title: 'Proof of Concept', subtext: 'This section will be built in the next step.' }
+            '/': {
+                type: 'hero',
+                title: 'Stop Missing The Right Jobs.',
+                subtext: 'Precision-matched job discovery delivered daily at 9AM.'
+            },
+            '/dashboard': {
+                type: 'standard',
+                title: 'Dashboard',
+                emptyTitle: 'No jobs yet.',
+                emptySubtext: 'In the next step, you will load a realistic dataset.'
+            },
+            '/saved': {
+                type: 'standard',
+                title: 'Saved Jobs',
+                emptyTitle: 'Your saved list is empty.',
+                emptySubtext: 'Save interesting opportunities to track them here.'
+            },
+            '/digest': {
+                type: 'standard',
+                title: 'Weekly Digest',
+                emptyTitle: 'No digest generated.',
+                emptySubtext: 'Once we start tracking jobs, your weekly summary will appear here.'
+            },
+            '/settings': {
+                type: 'settings',
+                title: 'Preferences',
+                subtext: 'Configure your career focus and discovery rules.'
+            },
+            '/proof': {
+                type: 'standard',
+                title: 'Proof of Concept',
+                emptyTitle: 'Artifact Workspace.',
+                emptySubtext: 'Placeholder for premium build system artifact collection.'
+            }
         };
 
         // Router Implementation
@@ -73,26 +101,85 @@
             const route = routes[path] || routes['/'];
             const app = document.getElementById('app-root');
 
-            // Render Page Template
-            app.innerHTML = `
-                <section class="context-header">
-                    <h1>${route.title}</h1>
-                    <p class="subtext">${route.subtext}</p>
-                </section>
-                <main class="main-container">
-                    <article class="primary-workspace">
-                        <div class="card" style="height: 400px; display: flex; align-items: center; justify-content: center; border-style: dashed;">
-                            <p class="text-muted">Workspace Placeholder: ${route.title}</p>
-                        </div>
-                    </article>
-                    <aside class="secondary-panel">
-                        <div class="card">
-                            <h3>Guidance</h3>
-                            <p class="text-muted" style="font-size: 14px;">Maintaining the calm, intentional philosophy of KodNest. Focus on the core purpose of the ${route.title} view.</p>
-                        </div>
-                    </aside>
-                </main>
-            `;
+            if (route.type === 'hero') {
+                app.innerHTML = `
+                    <section class="context-header hero-section">
+                        <h1>${route.title}</h1>
+                        <p class="subtext">${route.subtext}</p>
+                        <a href="#/settings" class="btn btn-primary">Start Tracking</a>
+                    </section>
+                `;
+            } else if (route.type === 'settings') {
+                app.innerHTML = `
+                    <section class="context-header">
+                        <h1>${route.title}</h1>
+                        <p class="subtext">${route.subtext}</p>
+                    </section>
+                    <main class="main-container">
+                        <article class="primary-workspace">
+                            <div class="card">
+                                <h2>Search Profile</h2>
+                                <div class="grid-2">
+                                    <div class="input-group">
+                                        <label class="label">Role Keywords</label>
+                                        <input type="text" class="input-field" placeholder="e.g. Senior Frontend Engineer, Product Designer">
+                                    </div>
+                                    <div class="input-group">
+                                        <label class="label">Preferred Locations</label>
+                                        <input type="text" class="input-field" placeholder="e.g. Remote, Bengaluru, London">
+                                    </div>
+                                </div>
+                                <div class="grid-2">
+                                    <div class="input-group">
+                                        <label class="label">Mode</label>
+                                        <select class="input-field">
+                                            <option>Remote</option>
+                                            <option>Hybrid</option>
+                                            <option>Onsite</option>
+                                        </select>
+                                    </div>
+                                    <div class="input-group">
+                                        <label class="label">Experience Level</label>
+                                        <select class="input-field">
+                                            <option>Entry Level</option>
+                                            <option>Mid-Senior</option>
+                                            <option>Lead / Staff</option>
+                                            <option>Executive</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <button class="btn btn-primary">Save Preferences</button>
+                            </div>
+                        </article>
+                        <aside class="secondary-panel">
+                            <div class="card" style="border-color: var(--color-warning);">
+                                <h3>Logic Pending</h3>
+                                <p class="text-muted" style="font-size: 14px;">In this step, we are only defining the UI structure. Preferences are not yet persistent.</p>
+                            </div>
+                        </aside>
+                    </main>
+                `;
+            } else {
+                app.innerHTML = `
+                    <section class="context-header">
+                        <h1>${route.title}</h1>
+                    </section>
+                    <main class="main-container">
+                        <article class="primary-workspace">
+                            <div class="empty-state">
+                                <h2 class="text-muted">${route.emptyTitle}</h2>
+                                <p class="text-muted">${route.emptySubtext}</p>
+                            </div>
+                        </article>
+                        <aside class="secondary-panel">
+                            <div class="card">
+                                <h3>Guidance</h3>
+                                <p class="text-muted" style="font-size: 14px;">This section is currently in a "Premium Empty" state, waiting for the dynamic dataset in the next phase.</p>
+                            </div>
+                        </aside>
+                    </main>
+                `;
+            }
 
             // Update Active Links
             document.querySelectorAll('.nav-link').forEach(link => {
